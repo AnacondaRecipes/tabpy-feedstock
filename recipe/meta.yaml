@@ -2,36 +2,35 @@
 {% set version = "2.15.0" %}
 
 package:
-  name: {{ name|lower }}
+  name: {{ name }}
   version: {{ version }}
 
 source:
-  url: https://files.pythonhosted.org/packages/source/{{ name[0] }}/{{ name }}/tabpy-{{ version }}.tar.gz
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
   sha256: a5dcc95d552d032ce77db51b2e0f77c85be7ec39513e1d8788435f171877e8d1
 
 build:
+  number: 0
+  noarch: python
   entry_points:
     - tabpy=tabpy.tabpy:main
-    - tabpy-user=tabpy.utils.tabpy_user:main
     - tabpy-deploy-models=tabpy.models.deploy_models:main
-  noarch: python
+    - tabpy-user=tabpy.utils.tabpy_user:main
   script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
-  number: 0
 
 requirements:
   host:
-    - python {{ python_min }}
+    - python >=3.10
     - pytest-runner
     - pip
     - setuptools
   run:
-    - cryptography
-    - pyjwt >=2.9,<3
-    - python >={{ python_min }}
+    - python >=3.10
     - cloudpickle
     - configparser
     - coverage
     - coveralls
+    - cryptography >=3.4.0
     - docopt
     - future
     - genson
@@ -41,6 +40,7 @@ requirements:
     - nltk
     - numpy
     - pandas
+    - pyjwt >=2.9,<3
     - pyopenssl
     - pytest
     - pytest-cov
@@ -53,25 +53,43 @@ requirements:
     - twisted
     - urllib3
     - pyarrow
-    - libarrow-flight
+
+# Skip below tests because TabPyApp() hits configparser.DuplicateOptionError from case-duplicate keys in this build host's os.environ
+{% set ignore_tests = "--ignore=tests/unit/server_tests/test_config.py" %}
+{% set ignore_tests = ignore_tests + " --ignore=tests/unit/server_tests/test_endpoint_handler.py" %}
+{% set ignore_tests = ignore_tests + " --ignore=tests/unit/server_tests/test_endpoints_handler.py" %}
+{% set ignore_tests = ignore_tests + " --ignore=tests/unit/server_tests/test_evaluation_plane_handler.py" %}
+{% set ignore_tests = ignore_tests + " --ignore=tests/unit/server_tests/test_oauth_handler.py" %}
+{% set ignore_tests = ignore_tests + " --ignore=tests/unit/server_tests/test_pwd_file.py" %}
+{% set ignore_tests = ignore_tests + " --ignore=tests/unit/server_tests/test_service_info_handler.py" %}
 
 test:
   imports:
     - tabpy
+  source_files:
+    - tests
+    - tabpy/VERSION
+  requires:
+    - pip
+    - pytest
   commands:
     - pip check
     - tabpy --help
     - tabpy-user --help
-  requires:
-    - pip
-    - python {{ python_min }}
+    - pytest -vv {{ ignore_tests }} tests/unit
 
+      
 about:
   home: https://github.com/tableau/TabPy
   summary: Web server Tableau uses to run Python scripts.
+  description: |
+    TabPy (the Tableau Python Server) is an Analytics Extension implementation which expands Tableau's 
+    capabilities by allowing users to execute Python scripts and saved functions via Tableau's table calculations.
   license: MIT
+  license_family: MIT
   license_file: LICENSE
-
+  dev_url: https://github.com/tableau/TabPy
+  doc_url: https://tableau.github.io/TabPy
 extra:
   recipe-maintainers:
     - rxm7706
